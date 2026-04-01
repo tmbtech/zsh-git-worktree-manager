@@ -79,7 +79,7 @@ function _wt_tui() {
       local wt_name="${action#navigate:}"
       # Validate against known worktrees using exact string comparison (no globs).
       local known_worktrees found=0 known
-      known_worktrees=($(git worktree list --porcelain 2>/dev/null | grep '^worktree ' | awk '{print $2}' | xargs -n1 basename))
+      known_worktrees=($(_wt_list_names))
       for known in "${known_worktrees[@]}"; do
         if [[ "$known" == "$wt_name" ]]; then
           found=1

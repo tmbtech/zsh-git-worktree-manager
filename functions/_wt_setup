@@ -1,7 +1,7 @@
 function _wt_setup() {
   # Parse options
   local skip_yarn=false
-  local base_branch="main"
+  local base_branch=""
   local branch_name=""
 
   while [[ "$#" -gt 0 ]]; do
@@ -13,7 +13,7 @@ function _wt_setup() {
         echo ""
         echo "Options:"
         echo "  --skip-yarn       Skip yarn install step"
-        echo "  --base=<branch>   Base branch to create from (default: main)"
+        echo "  --base=<branch>   Base branch to create from (default: auto-detected)"
         echo "  -h, --help        Show this help message"
         echo ""
         echo "Examples:"
@@ -50,6 +50,12 @@ function _wt_setup() {
   if [[ $? -ne 0 ]]; then
     echo "⚠️  Warning: Could not auto-detect worktree root"
     echo "Using current directory: $worktrees_dir"
+  fi
+
+  # Auto-detect default branch if --base was not provided
+  if [[ -z "$base_branch" ]]; then
+    base_branch=$(cd "$worktrees_dir/main" 2>/dev/null && git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@refs/remotes/origin/@@')
+    base_branch="${base_branch:-main}"
   fi
 
   # Check if main worktree exists

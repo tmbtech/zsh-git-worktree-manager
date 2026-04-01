@@ -40,13 +40,13 @@ function _wt_tui_data() {
   while IFS= read -r line; do
     case "$line" in
       worktree\ *)
-        # Emit the previous entry if we have one.
-        if [[ -n "$wt_path" ]]; then
+        # Emit the previous entry if we have one (skip bare entries).
+        if [[ -n "$wt_path" && "$is_bare" != "true" ]]; then
           _wt_tui_emit_entry "$first" "$wt_path" "$wt_head" "$wt_branch" "$wt_name" "$is_bare" "$is_current"
           first="false"
         fi
         wt_path="${line#worktree }"
-        wt_name="$(basename "$wt_path")"
+        wt_name="${wt_path#${root}/}"
         wt_head=""
         wt_branch=""
         is_bare="false"
@@ -67,8 +67,8 @@ function _wt_tui_data() {
     esac
   done < <(git worktree list --porcelain 2>/dev/null)
 
-  # Emit the last entry.
-  if [[ -n "$wt_path" ]]; then
+  # Emit the last entry (skip bare entries).
+  if [[ -n "$wt_path" && "$is_bare" != "true" ]]; then
     _wt_tui_emit_entry "$first" "$wt_path" "$wt_head" "$wt_branch" "$wt_name" "$is_bare" "$is_current"
   fi
 

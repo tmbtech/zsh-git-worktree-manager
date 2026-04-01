@@ -48,7 +48,7 @@ func (c ContentModel) renderSetup(width int) string {
 	b.WriteString(style.ContentTitle.Width(width).Render("Setup New Worktree"))
 	b.WriteString("\n\n")
 	b.WriteString(style.ContentBody.Width(width).Render(
-		"Creates a new git worktree from a base branch (default: main)."))
+		"Creates a new git worktree from a base branch (default: auto-detected)."))
 	b.WriteString("\n\n")
 	b.WriteString(style.ContentMuted.Width(width).Render("Usage:"))
 	b.WriteString("\n")

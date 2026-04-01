@@ -14,7 +14,7 @@ function _wt_symlink_shared_files() {
     echo "   Created empty CLAUDE.local.md in main"
   fi
 
-  if ln -sf "../main/CLAUDE.local.md" "$worktrees_dir/$branch_name/CLAUDE.local.md"; then
+  if ln -sf "$worktrees_dir/main/CLAUDE.local.md" "$worktrees_dir/$branch_name/CLAUDE.local.md"; then
     echo "✅ CLAUDE.local.md symlinked → main/CLAUDE.local.md"
   else
     echo "⚠️  Warning: Failed to symlink CLAUDE.local.md"
@@ -37,7 +37,7 @@ function _wt_symlink_shared_files() {
     echo "⚠️  Real file exists at .claude/settings.local.json — backing up to .claude/settings.local.json.bak"
     mv "$settings_local_dest" "${settings_local_dest}.bak"
   fi
-  if ln -sf "../../main/.claude/settings.local.json" "$settings_local_dest"; then
+  if ln -sf "$worktrees_dir/main/.claude/settings.local.json" "$settings_local_dest"; then
     echo "✅ .claude/settings.local.json symlinked → main/.claude/settings.local.json"
   else
     echo "⚠️  Warning: Failed to symlink .claude/settings.local.json"

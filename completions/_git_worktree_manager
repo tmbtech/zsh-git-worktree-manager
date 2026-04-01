@@ -7,12 +7,9 @@
 _get_worktrees() {
   local worktrees=()
 
-  # Get worktree list and extract directory basenames
+  # Get worktree list using prefix-stripping to preserve slash-containing names
   if git worktree list --porcelain &>/dev/null; then
-    worktrees=($(git worktree list --porcelain | \
-      grep '^worktree ' | \
-      awk '{print $2}' | \
-      xargs -n1 basename))
+    worktrees=($(_wt_list_names))
   fi
 
   echo "${worktrees[@]}"
