@@ -54,12 +54,22 @@ function _wt_clean() {
   echo "✅ Fetch complete"
   echo ""
 
-  # Get all worktree names (excluding main)
+  # Detect the default branch for unpushed-commit comparison
+  local default_branch
+  default_branch=$(cd "$worktrees_dir/main" && git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@refs/remotes/origin/@@')
+  default_branch="${default_branch:-main}"
+
+  # Cache porcelain output — avoids shelling out to git on every loop iteration
+  local porcelain_output
+  porcelain_output=$(git worktree list --porcelain)
+
+  # Get all worktree names relative to worktrees_dir (excluding main).
+  # Use sed to strip the full path prefix instead of basename, so nested
+  # names like "feature/foo" are preserved correctly.
   local -a all_worktrees
-  all_worktrees=($(git worktree list --porcelain | \
+  all_worktrees=($(echo "$porcelain_output" | \
     grep '^worktree ' | \
-    awk '{print $2}' | \
-    xargs -n1 basename | \
+    sed "s|^worktree ${worktrees_dir}/||" | \
     grep -v '^main$'))
 
   if [[ ${#all_worktrees[@]} -eq 0 ]]; then
@@ -79,9 +89,11 @@ function _wt_clean() {
   for wt in "${all_worktrees[@]}"; do
     local wt_path="$worktrees_dir/$wt"
 
-    # Extract branch name
-    local branch_name=$(git worktree list --porcelain | \
-      grep -A 2 "worktree.*/${wt}$" | \
+    # Extract branch name using cached porcelain output.
+    # Use grep -xF for exact fixed-string line matching to avoid regex
+    # metacharacters in worktree names (e.g. dots) causing false matches.
+    local branch_name=$(echo "$porcelain_output" | \
+      grep -xF "worktree $worktrees_dir/$wt" -A 2 | \
       awk '/^branch/ { sub(/^refs\/heads\//, "", $2); print $2; exit }')
 
     # Skip detached HEAD worktrees
@@ -105,9 +117,9 @@ function _wt_clean() {
       continue
     fi
 
-    # Check for unpushed commits
+    # Check for unpushed commits against the default branch
     if [[ "$include_unpushed" != true ]] && [[ -d "$wt_path" ]]; then
-      local unpushed_count=$(git -C "$wt_path" cherry -v main 2>/dev/null | grep -c '^+')
+      local unpushed_count=$(git -C "$wt_path" cherry -v "$default_branch" 2>/dev/null | grep -c '^+')
       if [[ "$unpushed_count" -gt 0 ]]; then
         skipped_unpushed+=("$wt")
         echo "   ⚠️  $wt  (remote branch gone, $unpushed_count unpushed commit(s) — skipped)"
@@ -167,26 +179,33 @@ function _wt_clean() {
   local failed=0
 
   for wt in "${removable[@]}"; do
-    # Get the branch name before removing
-    local branch_name=$(git worktree list --porcelain | \
-      grep -A 2 "worktree.*/${wt}$" | \
+    # Get the branch name before removing (from cached porcelain output)
+    local branch_name=$(echo "$porcelain_output" | \
+      grep -xF "worktree $worktrees_dir/$wt" -A 2 | \
       awk '/^branch/ { sub(/^refs\/heads\//, "", $2); print $2; exit }')
 
-    if git worktree remove "$worktrees_dir/$wt" 2>/dev/null; then
+    # Capture stderr so failures include diagnostics
+    local remove_err
+    remove_err=$(git worktree remove "$worktrees_dir/$wt" 2>&1)
+    if [[ $? -eq 0 ]]; then
       echo "✅ Removed worktree '$wt'"
       ((removed++))
 
-      # Delete the associated branch
+      # Delete the associated branch — try safe delete first, then force
+      # only when --include-unpushed is set (mirrors the intent: user
+      # already opted in to losing local-only commits).
       if [[ -n "$branch_name" ]] && \
          git show-ref --verify --quiet "refs/heads/$branch_name"; then
-        if git branch -D "$branch_name" 2>/dev/null; then
+        if git branch -d "$branch_name" 2>/dev/null; then
           echo "   🌿 Branch '$branch_name' deleted"
+        elif [[ "$include_unpushed" == true ]] && git branch -D "$branch_name" 2>/dev/null; then
+          echo "   🌿 Branch '$branch_name' force deleted"
         else
-          echo "   ⚠️  Could not delete branch '$branch_name'"
+          echo "   ⚠️  Could not delete branch '$branch_name' (may have unmerged changes)"
         fi
       fi
     else
-      echo "❌ Failed to remove worktree '$wt' (may be locked — try 'git worktree remove $wt --force')"
+      echo "❌ Failed to remove worktree '$wt': $remove_err"
       ((failed++))
     fi
   done
