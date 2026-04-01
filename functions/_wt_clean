@@ -66,10 +66,13 @@ function _wt_clean() {
   # Get all worktree names relative to worktrees_dir (excluding main).
   # Use sed to strip the full path prefix instead of basename, so nested
   # names like "feature/foo" are preserved correctly.
+  # Filter out lines still starting with "worktree " — these are worktrees
+  # outside the managed root whose prefix didn't match the sed pattern.
   local -a all_worktrees
   all_worktrees=($(echo "$porcelain_output" | \
     grep '^worktree ' | \
     sed "s|^worktree ${worktrees_dir}/||" | \
+    grep -v '^worktree ' | \
     grep -v '^main$'))
 
   if [[ ${#all_worktrees[@]} -eq 0 ]]; then
@@ -191,14 +194,14 @@ function _wt_clean() {
       echo "✅ Removed worktree '$wt'"
       ((removed++))
 
-      # Delete the associated branch — try safe delete first, then force
-      # only when --include-unpushed is set (mirrors the intent: user
-      # already opted in to losing local-only commits).
+      # Delete the associated branch — run from main worktree so that
+      # git branch -d checks merge status against main's HEAD, not
+      # whatever worktree the caller happens to be in.
       if [[ -n "$branch_name" ]] && \
          git show-ref --verify --quiet "refs/heads/$branch_name"; then
-        if git branch -d "$branch_name" 2>/dev/null; then
+        if git -C "$worktrees_dir/main" branch -d "$branch_name" 2>/dev/null; then
           echo "   🌿 Branch '$branch_name' deleted"
-        elif [[ "$include_unpushed" == true ]] && git branch -D "$branch_name" 2>/dev/null; then
+        elif [[ "$include_unpushed" == true ]] && git -C "$worktrees_dir/main" branch -D "$branch_name" 2>/dev/null; then
           echo "   🌿 Branch '$branch_name' force deleted"
         else
           echo "   ⚠️  Could not delete branch '$branch_name' (may have unmerged changes)"
