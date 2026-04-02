@@ -5,11 +5,7 @@ function _wt_remove_glob() {
 
   # Get all worktree names (excluding main)
   local -a all_worktrees
-  all_worktrees=($(git worktree list --porcelain | \
-    grep '^worktree ' | \
-    awk '{print $2}' | \
-    xargs -n1 basename | \
-    grep -v '^main$'))
+  all_worktrees=($(_wt_list_names --exclude-main))
 
   if [[ ${#all_worktrees[@]} -eq 0 ]]; then
     echo "❌ No removable worktrees found (main worktree is protected)"
@@ -78,9 +74,10 @@ function _wt_remove_glob() {
 
   # Remove each matched worktree
   for wt in "${matched[@]}"; do
-    # Get the branch name before removing
+    # Get the branch name before removing.
+    # Use grep -xF for exact matching so slashes in names don't break.
     local branch_name=$(git worktree list --porcelain | \
-      grep -A 2 "worktree.*/${wt}$" | \
+      grep -xF "worktree $worktrees_dir/$wt" -A 2 | \
       awk '/^branch/ { sub(/^refs\/heads\//, "", $2); print $2; exit }')
 
     if git worktree remove "$worktrees_dir/$wt" 2>/dev/null; then

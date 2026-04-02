@@ -64,16 +64,9 @@ function _wt_clean() {
   porcelain_output=$(git worktree list --porcelain)
 
   # Get all worktree names relative to worktrees_dir (excluding main).
-  # Use sed to strip the full path prefix instead of basename, so nested
-  # names like "feature/foo" are preserved correctly.
-  # Filter out lines still starting with "worktree " — these are worktrees
-  # outside the managed root whose prefix didn't match the sed pattern.
+  # Uses _wt_list_names which preserves slash-containing names and filters .bare.
   local -a all_worktrees
-  all_worktrees=($(echo "$porcelain_output" | \
-    grep '^worktree ' | \
-    sed "s|^worktree ${worktrees_dir}/||" | \
-    grep -v '^worktree ' | \
-    grep -v '^main$'))
+  all_worktrees=($(_wt_list_names --exclude-main))
 
   if [[ ${#all_worktrees[@]} -eq 0 ]]; then
     echo "✅ No worktrees to clean (only main exists)"

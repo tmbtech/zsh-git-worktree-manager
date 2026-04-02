@@ -181,9 +181,18 @@ function _wt_dir() {
   echo "✅ Branches fetched"
   echo ""
 
-  # Add main worktree
+  # Ensure refs/remotes/origin/HEAD points at the remote's default branch.
+  # Bare clones may not set this automatically after fetch refspec changes.
+  git remote set-head origin --auto 2>/dev/null
+
+  # Detect the remote's default branch
+  local default_branch
+  default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@refs/remotes/origin/@@')
+  default_branch="${default_branch:-main}"
+
+  # Add main worktree (directory is always named "main" for consistency)
   echo "🌳 Creating main worktree..."
-  if ! git worktree add main; then
+  if ! git worktree add main "$default_branch"; then
     echo "❌ Error: Failed to create main worktree"
     cd "$original_dir"
     rm -rf "$dir_name"
@@ -194,11 +203,11 @@ function _wt_dir() {
   echo ""
 
   # Set upstream tracking for the main worktree branch
-  echo "🔗 Setting upstream tracking for $base_branch..."
-  if (cd "$worktrees_dir/main" && git branch --set-upstream-to="origin/$base_branch"); then
-    echo "✅ Upstream set to origin/$base_branch"
+  echo "🔗 Setting upstream tracking for $default_branch..."
+  if (cd "$original_dir/$dir_name/main" && git branch --set-upstream-to="origin/$default_branch"); then
+    echo "✅ Upstream set to origin/$default_branch"
   else
-    echo "⚠️  Warning: Failed to set upstream tracking for $base_branch"
+    echo "⚠️  Warning: Failed to set upstream tracking for $default_branch"
   fi
   echo ""
 

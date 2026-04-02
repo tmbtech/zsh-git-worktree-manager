@@ -106,7 +106,7 @@ worktree setup --help
 ```
 
 **What it does:**
-1. Updates the base branch (default: main)
+1. Updates the base branch (default: auto-detected from remote)
 2. Creates a new worktree and branch
 3. Copies environment files (*.env, key.pem, cert.pem)
 4. Installs dependencies with yarn
@@ -143,7 +143,7 @@ worktree remove <TAB>
 5. Handles force deletion if branch has unmerged changes
 
 **Interactive Mode:**
-When called without arguments, displays a numbered menu of all removable worktrees (excluding the protected "main" worktree). Use arrow keys or type the number to select, then press Enter. Press Ctrl+C to cancel.
+When called without arguments, displays a numbered menu of all removable worktrees (excluding the protected "main" worktree). Type the number of your selection and press Enter. Press Ctrl+C to cancel.
 
 ### worktree pull
 

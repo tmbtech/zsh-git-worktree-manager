@@ -7,7 +7,7 @@ function _get_worktree_root() {
     # We're in a git worktree, get the parent directory
     local git_common_dir=$(git rev-parse --git-common-dir)
     # Navigate to the worktrees parent directory
-    local worktree_root=$(cd "$git_common_dir/.." && pwd)
+    local worktree_root=$(cd "$git_common_dir/.." && pwd -P)
     echo "$worktree_root"
     return 0
   fi

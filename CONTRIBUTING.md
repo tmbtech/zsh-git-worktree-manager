@@ -48,7 +48,7 @@ The interactive TUI is written in Go with [Bubble Tea](https://github.com/charmb
 
 ```bash
 cd tui
-go build -o ../bin/worktree-tui .
+go build -o ../bin/worktree-tui ./cmd/worktree-tui/
 go test ./...
 ```
 

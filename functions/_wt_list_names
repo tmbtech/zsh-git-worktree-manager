@@ -1,0 +1,28 @@
+# List worktree names relative to the worktrees root directory.
+# Uses zsh prefix-stripping instead of basename so slash-containing
+# names like "feature/login" are preserved correctly.
+# Usage: _wt_list_names [--exclude-main]
+function _wt_list_names() {
+  local exclude_main=false
+  [[ "$1" == "--exclude-main" ]] && exclude_main=true
+
+  local worktrees_dir=$(_get_worktree_root)
+  local -a names=()
+
+  local line
+  while IFS= read -r line; do
+    [[ "$line" != worktree\ * ]] && continue
+    local wt_path="${line#worktree }"
+    # Skip paths outside managed root
+    [[ "$wt_path" != "${worktrees_dir}/"* ]] && continue
+    local name="${wt_path#${worktrees_dir}/}"
+    # Skip bare repo directory
+    [[ "$name" == ".bare" ]] && continue
+    names+=("$name")
+  done < <(git worktree list --porcelain)
+
+  if $exclude_main; then
+    names=(${names:#main})
+  fi
+  echo "${names[@]}"
+}

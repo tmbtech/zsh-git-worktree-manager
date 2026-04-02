@@ -21,11 +21,7 @@ function _wt_remove() {
 
     # Get list of worktrees (excluding main)
     local -a worktrees
-    worktrees=($(git worktree list --porcelain | \
-      grep '^worktree ' | \
-      awk '{print $2}' | \
-      xargs -n1 basename | \
-      grep -v '^main$'))
+    worktrees=($(_wt_list_names --exclude-main))
 
     # Check if any removable worktrees exist
     if [[ ${#worktrees[@]} -eq 0 ]]; then
@@ -80,10 +76,11 @@ function _wt_remove() {
     }
   fi
 
-  # Get the branch name associated with this worktree before removing it
-  # Using grep + awk is faster than complex awk pattern matching
+  # Get the branch name associated with this worktree before removing it.
+  # Use grep -xF for exact fixed-string matching so slash-containing names
+  # like "feature/login" don't cause false matches via regex interpretation.
   local branch_name=$(git worktree list --porcelain | \
-    grep -A 2 "worktree.*/${worktree_name}$" | \
+    grep -xF "worktree $worktrees_dir/$worktree_name" -A 2 | \
     awk '/^branch/ { sub(/^refs\/heads\//, "", $2); print $2; exit }')
 
   if [[ "$force_yes" != true ]]; then
